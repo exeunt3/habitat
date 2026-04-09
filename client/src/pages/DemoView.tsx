@@ -5,6 +5,7 @@ import { EffectComposer, Bloom, Vignette, DepthOfField } from '@react-three/post
 import { EcosystemStateProvider, useEcosystemState } from '../context/EcosystemState'
 import ReefScene from '../scene/ReefScene'
 import TreeScene from '../scene/TreeScene'
+import CreekScene from '../scene/CreekScene'
 
 // ── Error boundary ────────────────────────────────────────────────────────────
 
@@ -58,12 +59,14 @@ function DemoSceneInner() {
   return (
     <Canvas
       style={{ width: '100%', height: '100%' }}
-      camera={{ position: [0, 2, 6], fov: 60, near: 0.1, far: 200 }}
+      camera={{ position: theme === 'creek' ? [0, 3, 8] : [0, 2, 6], fov: 60, near: 0.1, far: 200 }}
       gl={{ antialias: true, alpha: false }}
       shadows
     >
       {theme === 'tree' ? (
         <TreeScene {...props} />
+      ) : theme === 'creek' ? (
+        <CreekScene {...props} />
       ) : (
         <>
           <ReefScene {...props} />
@@ -196,7 +199,7 @@ interface DemoInfo {
 }
 
 interface DemoViewProps {
-  theme: 'reef' | 'tree'
+  theme: 'reef' | 'tree' | 'creek'
 }
 
 export default function DemoView({ theme }: DemoViewProps) {
@@ -240,7 +243,7 @@ export default function DemoView({ theme }: DemoViewProps) {
           height: '100vh',
           overflow: 'hidden',
           cursor: cursorVisible ? 'default' : 'none',
-          background: theme === 'reef' ? '#0d1f2d' : '#050810',
+          background: theme === 'reef' ? '#0d1f2d' : theme === 'creek' ? '#0d0a06' : '#050810',
         }}
       >
         <SceneErrorBoundary>
@@ -252,3 +255,4 @@ export default function DemoView({ theme }: DemoViewProps) {
     </EcosystemStateProvider>
   )
 }
+

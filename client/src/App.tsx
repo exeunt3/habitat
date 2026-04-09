@@ -18,8 +18,9 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/demo/reef" element={<DemoView theme="reef" />} />
-          <Route path="/demo/tree" element={<DemoView theme="tree" />} />
+          <Route path="/demo/reef"   element={<DemoView theme="reef" />} />
+          <Route path="/demo/tree"   element={<DemoView theme="tree" />} />
+          <Route path="/demo/creek"  element={<DemoView theme="creek" />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/auth/verify/:token" element={<AuthVerifyPage />} />
           <Route path="/submit" element={<SubmitPage />} />

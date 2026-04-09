@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 
-// ── Animated gradient background canvas ───────────────────────────────────────
+// ── Animated background ────────────────────────────────────────────────────────
 
 function AnimatedBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -21,40 +21,33 @@ function AnimatedBackground() {
     window.addEventListener('resize', resize)
 
     function draw() {
-      t += 0.003
+      t += 0.0015
       const w = canvas!.width
       const h = canvas!.height
 
-      // Deep base
-      ctx.fillStyle = '#060912'
+      ctx.fillStyle = '#05060c'
       ctx.fillRect(0, 0, w, h)
 
-      // Slow drifting radial blobs
       const blobs = [
-        { x: 0.3 + Math.sin(t * 0.7) * 0.18, y: 0.4 + Math.cos(t * 0.5) * 0.15, r: 0.45, color: '14, 28, 60' },
-        { x: 0.7 + Math.cos(t * 0.6) * 0.14, y: 0.6 + Math.sin(t * 0.8) * 0.12, r: 0.38, color: '6, 22, 48' },
-        { x: 0.5 + Math.sin(t * 0.4 + 1) * 0.20, y: 0.2 + Math.cos(t * 0.55) * 0.10, r: 0.30, color: '10, 18, 42' },
+        { x: 0.25 + Math.sin(t * 0.5) * 0.15, y: 0.35 + Math.cos(t * 0.4) * 0.12, r: 0.55, color: '8, 18, 48', op: 0.18 },
+        { x: 0.72 + Math.cos(t * 0.45) * 0.12, y: 0.65 + Math.sin(t * 0.6) * 0.10, r: 0.42, color: '4, 14, 38', op: 0.14 },
+        { x: 0.55 + Math.sin(t * 0.35 + 2) * 0.18, y: 0.18 + Math.cos(t * 0.42) * 0.08, r: 0.35, color: '12, 24, 55', op: 0.12 },
       ]
 
-      for (const blob of blobs) {
-        const gx = blob.x * w
-        const gy = blob.y * h
-        const gr = blob.r * Math.max(w, h)
+      for (const b of blobs) {
+        const gx = b.x * w, gy = b.y * h, gr = b.r * Math.max(w, h)
         const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, gr)
-        grad.addColorStop(0, `rgba(${blob.color}, 0.35)`)
-        grad.addColorStop(1, `rgba(${blob.color}, 0)`)
+        grad.addColorStop(0, `rgba(${b.color}, ${b.op})`)
+        grad.addColorStop(1, `rgba(${b.color}, 0)`)
         ctx.fillStyle = grad
         ctx.fillRect(0, 0, w, h)
       }
 
-      // Subtle star field
-      ctx.fillStyle = 'rgba(180, 200, 255, 0.55)'
-      // deterministic from seed — draw once would be nicer but this is readable
-      for (let i = 0; i < 60; i++) {
+      ctx.fillStyle = 'rgba(180, 200, 255, 1)'
+      for (let i = 0; i < 48; i++) {
         const sx = ((i * 137.508 * w) % w)
         const sy = ((i * 97.3 * h) % h)
-        const alpha = 0.15 + Math.sin(t * 1.2 + i) * 0.12
-        ctx.globalAlpha = alpha
+        ctx.globalAlpha = 0.08 + Math.sin(t * 0.8 + i) * 0.06
         ctx.fillRect(sx, sy, 1, 1)
       }
       ctx.globalAlpha = 1
@@ -72,197 +65,303 @@ function AnimatedBackground() {
   return (
     <canvas
       ref={canvasRef}
-      style={{
-        position: 'fixed',
-        top: 0, left: 0,
-        width: '100%', height: '100%',
-        zIndex: 0,
-        pointerEvents: 'none',
-      }}
+      style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', zIndex: 0, pointerEvents: 'none' }}
     />
   )
 }
 
-// ── Shared style constants ────────────────────────────────────────────────────
+// ── Design tokens ─────────────────────────────────────────────────────────────
 
 const FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif'
 
-const sectionStyle: React.CSSProperties = {
-  position: 'relative',
-  zIndex: 1,
-  maxWidth: 860,
-  margin: '0 auto',
-  padding: '80px 32px',
+const BLUE      = 'rgba(65,130,255,0.92)'
+const BLUE_DIM  = 'rgba(65,130,255,0.18)'
+const BLUE_RULE = 'rgba(65,130,255,0.55)'
+
+// Full-width section wrapper + inner centering (Sensoria zone approach)
+function Zone({
+  children,
+  overlay = 'transparent',
+  topBorder = false,
+  bottomBorder = false,
+}: {
+  children: React.ReactNode
+  overlay?: string
+  topBorder?: boolean
+  bottomBorder?: boolean
+}) {
+  return (
+    <div
+      style={{
+        position: 'relative',
+        zIndex: 1,
+        width: '100%',
+        background: overlay,
+        borderTop:    topBorder    ? '1px solid rgba(255,255,255,0.07)' : undefined,
+        borderBottom: bottomBorder ? '1px solid rgba(255,255,255,0.07)' : undefined,
+      }}
+    >
+      <div style={{ maxWidth: 980, margin: '0 auto', padding: '0 40px' }}>
+        {children}
+      </div>
+    </div>
+  )
 }
 
-const labelStyle: React.CSSProperties = {
+// Section label with accent mark
+function Label({ children }: { children: string }) {
+  return (
+    <div
+      style={{
+        fontFamily: FONT,
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: '0.2em',
+        textTransform: 'uppercase',
+        color: BLUE_RULE,
+        marginBottom: 28,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+      }}
+    >
+      <span style={{ display: 'inline-block', width: 28, height: 1, background: BLUE_RULE }} />
+      {children}
+    </div>
+  )
+}
+
+const H2: React.CSSProperties = {
   fontFamily: FONT,
-  fontSize: 11,
-  fontWeight: 600,
-  letterSpacing: '0.14em',
-  textTransform: 'uppercase',
-  color: 'rgba(120, 170, 255, 0.65)',
-  marginBottom: 20,
+  fontSize: 'clamp(36px, 5vw, 56px)',
+  fontWeight: 700,
+  color: '#dde3f2',
+  lineHeight: 1.1,
+  letterSpacing: '-0.025em',
+  margin: '0 0 24px',
 }
 
-const headingStyle: React.CSSProperties = {
+const body: React.CSSProperties = {
   fontFamily: FONT,
-  fontSize: 'clamp(26px, 4vw, 38px)',
-  fontWeight: 600,
-  color: 'rgba(220, 228, 245, 0.92)',
-  lineHeight: 1.3,
-  margin: '0 0 20px',
-}
-
-const bodyStyle: React.CSSProperties = {
-  fontFamily: FONT,
-  fontSize: 16,
-  lineHeight: 1.75,
-  color: 'rgba(165, 178, 205, 0.82)',
-}
-
-const divider: React.CSSProperties = {
-  width: '100%',
-  height: 1,
-  background: 'rgba(255,255,255,0.05)',
-  margin: 0,
+  fontSize: 17,
+  lineHeight: 1.72,
+  color: 'rgba(158,172,205,0.82)',
 }
 
 // ── Hero ──────────────────────────────────────────────────────────────────────
 
 function Hero() {
   return (
-    <section
+    <div
       style={{
         position: 'relative',
         zIndex: 1,
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
-        padding: '0 clamp(20px, 6vw, 80px)',
+        width: '100%',
+        backgroundImage: 'url(/demo.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center 38%',
+        backgroundRepeat: 'no-repeat',
       }}
     >
-      {/* Logo mark */}
-      <div
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle at 38% 38%, rgba(60,120,220,0.55), rgba(10,25,70,0.0))',
-          border: '1px solid rgba(80,130,255,0.25)',
-          marginBottom: 36,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-          <circle cx="11" cy="11" r="3.5" fill="rgba(100,170,255,0.7)" />
-          <circle cx="11" cy="11" r="7" stroke="rgba(80,140,255,0.35)" strokeWidth="1" fill="none" />
-          <circle cx="11" cy="11" r="10.2" stroke="rgba(60,110,220,0.18)" strokeWidth="0.8" fill="none" />
-        </svg>
-      </div>
-
-      <div style={labelStyle}>Introducing Habitat</div>
-
-      <h1
-        style={{
-          fontFamily: FONT,
-          fontSize: 'clamp(38px, 7vw, 72px)',
-          fontWeight: 700,
-          color: 'rgba(225, 232, 250, 0.96)',
-          lineHeight: 1.12,
-          margin: '0 0 24px',
-          letterSpacing: '-0.02em',
-          maxWidth: 820,
-        }}
-      >
-        Your team's wellbeing,<br />made visible.
-      </h1>
-
-      <p
-        style={{
-          fontFamily: FONT,
-          fontSize: 'clamp(16px, 2.2vw, 20px)',
-          color: 'rgba(155, 172, 210, 0.80)',
-          lineHeight: 1.65,
-          maxWidth: 520,
-          margin: '0 0 48px',
-        }}
-      >
-        Habitat turns anonymous employee feedback into a living ecosystem that leaders can actually feel — not just read.
-      </p>
-
-      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
-        <Link
-          to="/demo/reef"
-          style={{
-            fontFamily: FONT,
-            fontSize: 15,
-            fontWeight: 600,
-            padding: '14px 32px',
-            borderRadius: 10,
-            background: 'rgba(50, 110, 230, 0.85)',
-            color: 'rgba(220, 232, 255, 0.95)',
-            textDecoration: 'none',
-            letterSpacing: '0.01em',
-            transition: 'background 0.2s',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(65, 130, 255, 0.95)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(50, 110, 230, 0.85)')}
-        >
-          See the reef demo
-        </Link>
-        <Link
-          to="/demo/tree"
-          style={{
-            fontFamily: FONT,
-            fontSize: 15,
-            fontWeight: 600,
-            padding: '14px 32px',
-            borderRadius: 10,
-            background: 'transparent',
-            border: '1px solid rgba(255,255,255,0.14)',
-            color: 'rgba(190, 210, 245, 0.82)',
-            textDecoration: 'none',
-            letterSpacing: '0.01em',
-            transition: 'border-color 0.2s, color 0.2s',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'
-            e.currentTarget.style.color = 'rgba(215, 228, 255, 0.95)'
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)'
-            e.currentTarget.style.color = 'rgba(190, 210, 245, 0.82)'
-          }}
-        >
-          See the forest demo
-        </Link>
-      </div>
-
-      {/* Scroll cue */}
+      {/* Dark overlay — gradient so image peeks through at the right edge */}
       <div
         style={{
           position: 'absolute',
-          bottom: 36,
+          inset: 0,
+          background: 'linear-gradient(105deg, rgba(5,6,12,0.91) 0%, rgba(5,6,12,0.82) 55%, rgba(5,6,12,0.55) 100%)',
+          pointerEvents: 'none',
+        }}
+      />
+      <div style={{ maxWidth: 980, margin: '0 auto', padding: '0 40px', position: 'relative' }}>
+      <section
+        style={{
+          minHeight: '100vh',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          gap: 6,
-          opacity: 0.35,
+          justifyContent: 'center',
+          paddingTop: 80,
+          paddingBottom: 80,
         }}
       >
-        <div style={{ fontFamily: FONT, fontSize: 11, letterSpacing: '0.1em', color: '#aaa' }}>SCROLL</div>
-        <svg width="14" height="20" viewBox="0 0 14 20" fill="none">
-          <rect x="5.5" y="2" width="3" height="6" rx="1.5" fill="rgba(180,200,255,0.7)" />
-          <rect x="0.5" y="0.5" width="13" height="19" rx="6.5" stroke="rgba(180,200,255,0.4)" />
-        </svg>
+        {/* Wordmark — branch icon + logotype */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 48, opacity: 0.55 }}>
+          <svg width="22" height="20" viewBox="0 0 52 44" fill="none" style={{ flexShrink: 0 }}>
+            <path d="M26 44 L26 28" stroke="rgba(65,130,255,1)" strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M26 28 L12 16" stroke="rgba(65,130,255,1)" strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M26 28 L40 16" stroke="rgba(65,130,255,1)" strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M12 16 L5 8"   stroke="rgba(65,130,255,0.8)" strokeWidth="1.2" strokeLinecap="round" />
+            <path d="M12 16 L17 7"  stroke="rgba(65,130,255,0.8)" strokeWidth="1.2" strokeLinecap="round" />
+            <path d="M40 16 L35 7"  stroke="rgba(65,130,255,0.8)" strokeWidth="1.2" strokeLinecap="round" />
+            <path d="M40 16 L47 8"  stroke="rgba(65,130,255,0.8)" strokeWidth="1.2" strokeLinecap="round" />
+            <circle cx="5"  cy="7"  r="2.2" fill="rgba(65,130,255,0.9)" />
+            <circle cx="17" cy="6"  r="2.2" fill="rgba(65,130,255,0.9)" />
+            <circle cx="35" cy="6"  r="2.2" fill="rgba(65,130,255,0.9)" />
+            <circle cx="47" cy="7"  r="2.2" fill="rgba(65,130,255,0.9)" />
+            <path d="M26 34 L34 24" stroke="rgba(65,130,255,0.6)" strokeWidth="1" strokeLinecap="round" />
+            <circle cx="35" cy="23" r="1.8" fill="rgba(65,130,255,0.6)" />
+          </svg>
+          <span
+            style={{
+              fontFamily: FONT,
+              fontSize: 15,
+              fontWeight: 600,
+              letterSpacing: '0.22em',
+              textTransform: 'uppercase',
+              color: '#c8d4f0',
+            }}
+          >
+            Habitat
+          </span>
+        </div>
+
+        <h1
+          style={{
+            fontFamily: FONT,
+            fontSize: 'clamp(54px, 9vw, 100px)',
+            fontWeight: 700,
+            color: '#eaecf5',
+            lineHeight: 1.02,
+            letterSpacing: '-0.04em',
+            margin: '0 0 32px',
+            maxWidth: 820,
+          }}
+        >
+          The invisible,<br />made ambient.
+        </h1>
+
+        <p
+          style={{
+            fontFamily: FONT,
+            fontSize: 'clamp(17px, 2.4vw, 21px)',
+            color: 'rgba(150,168,210,0.8)',
+            lineHeight: 1.65,
+            maxWidth: 560,
+            margin: '0 0 56px',
+          }}
+        >
+          Habitat translates qualitative signals into living ecosystems —
+          for teams navigating change, and individuals seeking clarity.
+          Not a dashboard. A presence.
+        </p>
+
+        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+          <Link
+            to="/demo/reef"
+            style={{
+              fontFamily: FONT,
+              fontSize: 15,
+              fontWeight: 600,
+              padding: '15px 34px',
+              borderRadius: 8,
+              background: BLUE,
+              color: '#fff',
+              textDecoration: 'none',
+              letterSpacing: '0.01em',
+              transition: 'opacity 0.2s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+          >
+            Explore a demo
+          </Link>
+          <Link
+            to="/setup"
+            style={{
+              fontFamily: FONT,
+              fontSize: 15,
+              fontWeight: 500,
+              padding: '15px 34px',
+              borderRadius: 8,
+              background: 'transparent',
+              border: '1px solid rgba(255,255,255,0.13)',
+              color: 'rgba(185,205,245,0.8)',
+              textDecoration: 'none',
+              letterSpacing: '0.01em',
+              transition: 'border-color 0.2s, color 0.2s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.28)'
+              e.currentTarget.style.color = '#dde3f2'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.13)'
+              e.currentTarget.style.color = 'rgba(185,205,245,0.8)'
+            }}
+          >
+            Set up your deployment
+          </Link>
+        </div>
+
+        {/* Scroll indicator */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 36,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            gap: 8,
+            opacity: 0.28,
+          }}
+        >
+          <div style={{ fontFamily: FONT, fontSize: 10, letterSpacing: '0.18em', color: '#8899bb' }}>SCROLL</div>
+          <div style={{ width: 1, height: 36, background: 'rgba(140,160,210,0.5)' }} />
+        </div>
+      </section>
       </div>
-    </section>
+    </div>
+  )
+}
+
+// ── What is it ─────────────────────────────────────────────────────────────────
+
+function WhatIsIt() {
+  return (
+    <Zone overlay="rgba(0,0,0,0.22)" topBorder bottomBorder>
+      <section style={{ padding: '110px 0' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '60px 80px',
+            alignItems: 'start',
+          }}
+        >
+          <div>
+            <Label>For Organizations</Label>
+            <h2 style={{ ...H2, fontSize: 'clamp(28px, 3.8vw, 42px)' }}>
+              A read on your team that leaders can feel.
+            </h2>
+            <p style={{ ...body, marginBottom: 20 }}>
+              Habitat collects short, anonymous feedback on a rolling basis.
+              The responses don't go into a spreadsheet — they feed a real-time ecosystem.
+            </p>
+            <p style={body}>
+              When the team is thriving, the world is vibrant: coral grows, fish school,
+              water runs clear. When stress accumulates, things change — subtly at first,
+              then unmistakably. Leaders develop intuition the same way they learn to read weather.
+            </p>
+          </div>
+
+          <div>
+            <Label>For Individuals</Label>
+            <h2 style={{ ...H2, fontSize: 'clamp(28px, 3.8vw, 42px)' }}>
+              A mirror for your inner landscape.
+            </h2>
+            <p style={{ ...body, marginBottom: 20 }}>
+              Habitat also works as a personal practice. Answer three questions about your
+              energy, connection, and clarity — and watch a living environment shift to
+              reflect your inner state over time.
+            </p>
+            <p style={body}>
+              No journaling prompts, no graphs to interpret. Just a quiet ambient signal —
+              a creek filling with life, or running dry — that makes the invisible
+              suddenly perceptible.
+            </p>
+          </div>
+        </div>
+      </section>
+    </Zone>
   )
 }
 
@@ -271,101 +370,81 @@ function Hero() {
 function TheProblem() {
   const items = [
     {
-      icon: '📊',
-      title: 'Surveys that go nowhere',
-      body: 'Annual engagement surveys produce decks that sit in drive folders. By the time leadership reviews them, the moment has passed.',
+      n: '01',
+      title: 'Reports nobody reads.',
+      body: 'Annual surveys and quarterly check-ins produce data that sits in shared drives. By the time leadership reviews it, the moment has passed.',
     },
     {
-      icon: '🔢',
-      title: 'Numbers without feeling',
-      body: 'A score of 6.8 out of 10 is abstract. It doesn\'t convey urgency. It doesn\'t move people to act.',
+      n: '02',
+      title: 'Numbers without texture.',
+      body: "A score of 6.8 out of 10 means nothing in the gut. It doesn\u2019t convey urgency. It doesn\u2019t help you feel the right thing and act.",
     },
     {
-      icon: '🙈',
-      title: 'Silence between check-ins',
-      body: 'Problems compound in the weeks between meetings. Leaders are navigating blind, reacting to crises that could have been caught early.',
+      n: '03',
+      title: 'Blind spots, compounding.',
+      body: "Problems build quietly \u2014 in teams and in ourselves. By the time they surface, they\u2019ve been running for weeks, sometimes months.",
     },
   ]
 
   return (
-    <section style={{ ...sectionStyle, paddingTop: 100 }}>
-      <div style={labelStyle}>The Problem</div>
-      <h2 style={headingStyle}>Most teams are struggling in ways their leaders can't see.</h2>
-      <p style={{ ...bodyStyle, marginBottom: 56, maxWidth: 600 }}>
-        The tools we use to measure organizational health are designed for auditors, not humans. They produce reports when what we need is awareness.
-      </p>
+    <Zone>
+      <section style={{ padding: '110px 0' }}>
+        <Label>The Problem</Label>
+        <h2 style={H2}>
+          Most wellbeing slips past unnoticed.
+        </h2>
+        <p style={{ ...body, marginBottom: 64, maxWidth: 580 }}>
+          Whether you're leading a team or tending to your own inner life, the challenge is the same:
+          experience is continuous, but our tools for understanding it are episodic and abstract.
+        </p>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: 20,
-        }}
-      >
-        {items.map(item => (
-          <div
-            key={item.title}
-            style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.07)',
-              borderRadius: 14,
-              padding: '28px 28px 32px',
-            }}
-          >
-            <div style={{ fontSize: 24, marginBottom: 14 }}>{item.icon}</div>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: 2,
+          }}
+        >
+          {items.map((item, i) => (
             <div
+              key={item.n}
               style={{
-                fontFamily: FONT,
-                fontSize: 15,
-                fontWeight: 600,
-                color: 'rgba(215, 222, 240, 0.9)',
-                marginBottom: 10,
+                padding: '40px 36px 44px',
+                borderLeft: i === 0 ? `1px solid ${BLUE_DIM}` : '1px solid rgba(255,255,255,0.055)',
+                borderRight: i === items.length - 1 ? `1px solid rgba(255,255,255,0.055)` : 'none',
               }}
             >
-              {item.title}
+              <div
+                style={{
+                  fontFamily: FONT,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: '0.15em',
+                  color: 'rgba(65,130,255,0.3)',
+                  marginBottom: 28,
+                }}
+              >
+                {item.n}
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT,
+                  fontSize: 20,
+                  fontWeight: 600,
+                  color: '#d8e0f2',
+                  lineHeight: 1.3,
+                  letterSpacing: '-0.015em',
+                  marginBottom: 16,
+                }}
+              >
+                {item.title}
+              </div>
+              <div style={{ ...body, fontSize: 15, lineHeight: 1.68 }}>{item.body}</div>
             </div>
-            <div style={{ ...bodyStyle, fontSize: 14 }}>{item.body}</div>
-          </div>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-// ── The Approach ──────────────────────────────────────────────────────────────
-
-function TheApproach() {
-  return (
-    <section style={{ ...sectionStyle, paddingTop: 80 }}>
-      <div style={labelStyle}>The Approach</div>
-      <h2 style={headingStyle}>A living signal, not a static report.</h2>
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: 32,
-          marginTop: 12,
-        }}
-      >
-        <div>
-          <p style={bodyStyle}>
-            Habitat collects short, anonymous feedback from your team on a rolling basis — weekly or more often. The responses aren't stored in a spreadsheet. They feed a real-time simulation.
-          </p>
-          <p style={{ ...bodyStyle, marginTop: 16 }}>
-            When the team is thriving, the ecosystem is vibrant. Coral grows, fish school, light filters through clear water. When stress accumulates, things change — subtly at first, then unmistakably.
-          </p>
+          ))}
         </div>
-        <div>
-          <p style={bodyStyle}>
-            The visualization is displayed passively in common spaces — a TV in the office, a pinned tab in Slack, a screen in the boardroom. No one needs to open a dashboard. The signal is ambient.
-          </p>
-          <p style={{ ...bodyStyle, marginTop: 16 }}>
-            Leaders develop an intuition for their team's state the same way they develop intuition for weather: not by reading reports, but by paying attention over time.
-          </p>
-        </div>
-      </div>
-    </section>
+      </section>
+    </Zone>
   )
 }
 
@@ -375,72 +454,74 @@ function TheEvidence() {
   const refs = [
     {
       quote: 'Frequent, brief check-ins predict team retention and performance better than annual surveys — and the effect size is large.',
-      source: 'Harter et al. (2002). Business-unit-level relationship between employee satisfaction, employee engagement, and business outcomes.',
+      source: 'Harter et al. (2002).',
       journal: 'Journal of Applied Psychology, 87(2), 268–279.',
     },
     {
-      quote: 'Ambient displays in the workplace create shared awareness without requiring active attention, reducing the cognitive cost of staying informed.',
-      source: 'Mankoff et al. (2003). Heuristic evaluation of ambient displays.',
+      quote: 'Ambient displays create shared awareness without requiring active attention, reducing the cognitive cost of staying informed.',
+      source: 'Mankoff et al. (2003).',
       journal: 'ACM CHI Conference on Human Factors in Computing Systems.',
     },
     {
-      quote: 'Psychological safety — the belief that one won\'t be punished for speaking up — is the most important factor in high-performing teams.',
-      source: 'Edmondson, A. (1999). Psychological safety and learning behavior in work teams.',
-      journal: 'Administrative Science Quarterly, 44(2), 350–383.',
+      quote: 'Ecological momentary assessment — capturing states as they occur — reveals patterns of wellbeing that retrospective reports consistently miss.',
+      source: 'Shiffman, Stone & Hufford (2008).',
+      journal: 'Annual Review of Clinical Psychology, 4, 1–32.',
     },
     {
       quote: 'Abstract data presented as natural metaphors is processed faster and retained longer than equivalent numerical dashboards.',
-      source: 'Ware, C. (2012). Information Visualization: Perception for Design (3rd ed.).',
-      journal: 'Morgan Kaufmann.',
+      source: 'Ware, C. (2012).',
+      journal: 'Information Visualization: Perception for Design, Morgan Kaufmann.',
+    },
+    {
+      quote: 'Regular reflection on subjective experience — through brief structured check-ins — predicts sustained wellbeing gains over time.',
+      source: 'Lyubomirsky & Layous (2013).',
+      journal: 'Current Directions in Psychological Science, 22(1), 57–62.',
+    },
+    {
+      quote: 'Psychological safety — the belief that one won\'t be punished for speaking up — is the most important factor in high-performing teams.',
+      source: 'Edmondson, A. (1999).',
+      journal: 'Administrative Science Quarterly, 44(2), 350–383.',
     },
   ]
 
   return (
-    <section style={{ ...sectionStyle, paddingTop: 80 }}>
-      <div style={labelStyle}>The Evidence</div>
-      <h2 style={headingStyle}>Built on what the research actually says.</h2>
-      <p style={{ ...bodyStyle, marginBottom: 48, maxWidth: 580 }}>
-        Habitat isn't a new idea built on intuition. It synthesizes decades of organizational psychology and human-computer interaction research.
-      </p>
+    <Zone overlay="rgba(0,0,0,0.2)" topBorder bottomBorder>
+      <section style={{ padding: '110px 0' }}>
+        <Label>The Evidence</Label>
+        <h2 style={H2}>Built on what the research actually says.</h2>
+        <p style={{ ...body, marginBottom: 64, maxWidth: 600 }}>
+          Habitat synthesizes decades of organizational psychology, human-computer interaction,
+          and personal informatics research — for both the collective and the individual.
+        </p>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {refs.map((r, i) => (
-          <div
-            key={i}
-            style={{
-              background: 'rgba(255,255,255,0.025)',
-              border: '1px solid rgba(255,255,255,0.065)',
-              borderRadius: 12,
-              padding: '24px 28px',
-              display: 'grid',
-              gridTemplateColumns: 'auto 1fr',
-              gap: '0 20px',
-              alignItems: 'start',
-            }}
-          >
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '1px',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderRadius: 4,
+            overflow: 'hidden',
+          }}
+        >
+          {refs.map((r, i) => (
             <div
+              key={i}
               style={{
-                fontFamily: FONT,
-                fontSize: 11,
-                fontWeight: 700,
-                color: 'rgba(100,155,255,0.5)',
-                letterSpacing: '0.06em',
-                paddingTop: 3,
-                minWidth: 20,
-                textAlign: 'right',
+                padding: '32px 30px',
+                background: 'rgba(255,255,255,0.018)',
+                borderRight: i % 2 === 0 ? '1px solid rgba(255,255,255,0.07)' : 'none',
+                borderBottom: i < 4 ? '1px solid rgba(255,255,255,0.07)' : 'none',
               }}
             >
-              {String(i + 1).padStart(2, '0')}
-            </div>
-            <div>
               <p
                 style={{
                   fontFamily: FONT,
-                  fontSize: 15,
-                  color: 'rgba(210, 222, 245, 0.88)',
-                  lineHeight: 1.6,
+                  fontSize: 14,
+                  color: 'rgba(205,218,245,0.88)',
+                  lineHeight: 1.65,
                   fontStyle: 'italic',
-                  margin: '0 0 10px',
+                  margin: '0 0 14px',
                 }}
               >
                 "{r.quote}"
@@ -448,19 +529,187 @@ function TheEvidence() {
               <p
                 style={{
                   fontFamily: FONT,
-                  fontSize: 12,
-                  color: 'rgba(130, 150, 185, 0.65)',
+                  fontSize: 11,
+                  color: 'rgba(110,135,185,0.6)',
                   margin: 0,
-                  lineHeight: 1.55,
+                  lineHeight: 1.5,
+                  letterSpacing: '0.01em',
                 }}
               >
                 {r.source} <em>{r.journal}</em>
               </p>
             </div>
-          </div>
-        ))}
-      </div>
-    </section>
+          ))}
+        </div>
+      </section>
+    </Zone>
+  )
+}
+
+// ── Demo thumbnails ───────────────────────────────────────────────────────────
+
+function ReefThumbnail() {
+  return (
+    <svg viewBox="0 0 400 240" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%', display: 'block' }}>
+      <defs>
+        <linearGradient id="reef-bg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#071830" />
+          <stop offset="100%" stopColor="#0a1e3a" />
+        </linearGradient>
+        <radialGradient id="reef-glow" cx="50%" cy="60%" r="55%">
+          <stop offset="0%" stopColor="rgba(30,90,200,0.28)" />
+          <stop offset="100%" stopColor="rgba(5,10,30,0)" />
+        </radialGradient>
+      </defs>
+      <rect width="400" height="240" fill="url(#reef-bg)" />
+      <rect width="400" height="240" fill="url(#reef-glow)" />
+      <path d="M0,38 Q50,30 100,38 Q150,46 200,38 Q250,30 300,38 Q360,46 400,38 L400,0 L0,0 Z" fill="rgba(15,50,130,0.45)" />
+      <path d="M0,42 Q60,34 120,42 Q180,50 240,42 Q300,34 360,42 Q385,46 400,42" stroke="rgba(80,160,255,0.25)" strokeWidth="1.5" fill="none" />
+      <polygon points="70,0 90,0 65,240 45,240" fill="rgba(50,110,255,0.055)" />
+      <polygon points="190,0 210,0 200,240 180,240" fill="rgba(50,110,255,0.07)" />
+      <polygon points="300,0 318,0 330,240 312,240" fill="rgba(50,110,255,0.045)" />
+      <ellipse cx="130" cy="95" rx="15" ry="6" fill="rgba(100,185,255,0.72)" />
+      <polygon points="145,95 155,89 155,101" fill="rgba(100,185,255,0.72)" />
+      <ellipse cx="270" cy="75" rx="12" ry="5" fill="rgba(70,200,230,0.65)" />
+      <polygon points="282,75 290,70 290,80" fill="rgba(70,200,230,0.65)" />
+      <ellipse cx="330" cy="125" rx="10" ry="4" fill="rgba(90,155,255,0.6)" />
+      <polygon points="340,125 347,121 347,129" fill="rgba(90,155,255,0.6)" />
+      <ellipse cx="180" cy="140" rx="13" ry="5" fill="rgba(55,130,255,0.55)" />
+      <polygon points="193,140 201,136 201,144" fill="rgba(55,130,255,0.55)" />
+      <rect x="58" y="180" width="7" height="60" rx="3.5" fill="rgba(50,120,220,0.82)" />
+      <path d="M62,190 Q42,165 35,148" stroke="rgba(55,125,225,0.75)" strokeWidth="5" fill="none" strokeLinecap="round" />
+      <path d="M62,185 Q80,160 88,143" stroke="rgba(55,125,225,0.75)" strokeWidth="5" fill="none" strokeLinecap="round" />
+      <path d="M62,192 Q62,168 62,150" stroke="rgba(55,125,225,0.7)" strokeWidth="4" fill="none" strokeLinecap="round" />
+      <circle cx="35" cy="146" r="7" fill="rgba(40,100,200,0.55)" />
+      <circle cx="88" cy="141" r="6" fill="rgba(40,100,200,0.55)" />
+      <circle cx="62" cy="148" r="5" fill="rgba(40,100,200,0.5)" />
+      <rect x="196" y="158" width="8" height="82" rx="4" fill="rgba(75,155,255,0.85)" />
+      <path d="M200,168 Q178,143 170,125" stroke="rgba(75,155,255,0.7)" strokeWidth="5" fill="none" strokeLinecap="round" />
+      <path d="M200,165 Q222,140 230,122" stroke="rgba(75,155,255,0.7)" strokeWidth="5" fill="none" strokeLinecap="round" />
+      <circle cx="170" cy="122" r="7" fill="rgba(50,120,220,0.5)" />
+      <circle cx="230" cy="120" r="6" fill="rgba(50,120,220,0.5)" />
+      <rect x="322" y="190" width="6" height="50" rx="3" fill="rgba(40,105,200,0.78)" />
+      <path d="M325,196 Q305,168 298,150" stroke="rgba(45,110,210,0.72)" strokeWidth="4.5" fill="none" strokeLinecap="round" />
+      <path d="M325,194 Q340,162 348,145" stroke="rgba(45,110,210,0.72)" strokeWidth="4.5" fill="none" strokeLinecap="round" />
+      <path d="M325,196 Q322,165 324,145" stroke="rgba(45,110,210,0.68)" strokeWidth="4" fill="none" strokeLinecap="round" />
+      <rect x="0" y="222" width="400" height="18" fill="rgba(12,28,65,0.65)" rx="2" />
+      <circle cx="155" cy="168" r="2.5" fill="rgba(130,190,255,0.28)" />
+      <circle cx="245" cy="118" r="1.8" fill="rgba(130,190,255,0.22)" />
+      <circle cx="90" cy="145" r="1.5" fill="rgba(130,190,255,0.28)" />
+      <circle cx="350" cy="165" r="2" fill="rgba(130,190,255,0.2)" />
+    </svg>
+  )
+}
+
+function TreeThumbnail() {
+  return (
+    <svg viewBox="0 0 400 240" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%', display: 'block' }}>
+      <defs>
+        <linearGradient id="tree-bg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#060d0a" />
+          <stop offset="100%" stopColor="#081208" />
+        </linearGradient>
+        <radialGradient id="tree-glow" cx="50%" cy="42%" r="38%">
+          <stop offset="0%" stopColor="rgba(50,160,60,0.2)" />
+          <stop offset="100%" stopColor="rgba(5,20,8,0)" />
+        </radialGradient>
+      </defs>
+      <rect width="400" height="240" fill="url(#tree-bg)" />
+      <rect width="400" height="240" fill="url(#tree-glow)" />
+      <rect x="0" y="210" width="400" height="30" fill="rgba(10,25,12,0.8)" />
+      <path d="M0,210 Q40,204 80,210 Q120,216 160,210 Q200,204 240,210 Q280,216 320,210 Q360,204 400,210" stroke="rgba(30,80,30,0.4)" strokeWidth="1.5" fill="none" />
+      <rect x="60" y="155" width="8" height="55" rx="2" fill="rgba(15,40,18,0.7)" />
+      <ellipse cx="64" cy="138" rx="22" ry="28" fill="rgba(12,42,16,0.65)" />
+      <rect x="330" y="160" width="7" height="50" rx="2" fill="rgba(15,40,18,0.7)" />
+      <ellipse cx="333" cy="143" rx="20" ry="26" fill="rgba(12,42,16,0.65)" />
+      <path d="M196,240 L196,210 Q196,195 200,185 Q204,175 200,165" stroke="rgba(55,32,12,1)" strokeWidth="14" fill="none" strokeLinecap="round" />
+      <path d="M200,165 Q196,155 200,145" stroke="rgba(55,32,12,0.95)" strokeWidth="10" fill="none" strokeLinecap="round" />
+      <path d="M200,175 Q175,162 155,148" stroke="rgba(55,32,12,0.9)" strokeWidth="7" fill="none" strokeLinecap="round" />
+      <path d="M200,172 Q225,158 248,143" stroke="rgba(55,32,12,0.9)" strokeWidth="7" fill="none" strokeLinecap="round" />
+      <path d="M200,160 Q185,148 172,134" stroke="rgba(55,32,12,0.85)" strokeWidth="5" fill="none" strokeLinecap="round" />
+      <path d="M200,158 Q215,146 230,131" stroke="rgba(55,32,12,0.85)" strokeWidth="5" fill="none" strokeLinecap="round" />
+      <path d="M200,148 Q200,135 200,120" stroke="rgba(55,32,12,0.85)" strokeWidth="5" fill="none" strokeLinecap="round" />
+      <path d="M155,148 Q140,140 128,130" stroke="rgba(45,28,10,0.8)" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+      <path d="M248,143 Q262,135 274,124" stroke="rgba(45,28,10,0.8)" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+      <path d="M172,134 Q158,126 148,116" stroke="rgba(45,28,10,0.78)" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <path d="M230,131 Q244,123 254,112" stroke="rgba(45,28,10,0.78)" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <ellipse cx="200" cy="75" rx="55" ry="48" fill="rgba(28,95,28,0.85)" />
+      <ellipse cx="150" cy="100" rx="42" ry="36" fill="rgba(25,90,25,0.8)" />
+      <ellipse cx="252" cy="98" rx="40" ry="35" fill="rgba(25,90,25,0.8)" />
+      <ellipse cx="200" cy="65" rx="40" ry="32" fill="rgba(35,115,32,0.78)" />
+      <ellipse cx="130" cy="92" rx="30" ry="26" fill="rgba(30,100,28,0.72)" />
+      <ellipse cx="270" cy="90" rx="30" ry="26" fill="rgba(30,100,28,0.72)" />
+      <ellipse cx="200" cy="58" rx="28" ry="22" fill="rgba(45,140,38,0.65)" />
+      <ellipse cx="195" cy="52" rx="18" ry="14" fill="rgba(60,175,48,0.45)" />
+      <ellipse cx="148" cy="80" rx="16" ry="12" fill="rgba(55,165,44,0.38)" />
+      <ellipse cx="255" cy="78" rx="16" ry="12" fill="rgba(55,165,44,0.38)" />
+    </svg>
+  )
+}
+
+function CreekThumbnail() {
+  return (
+    <svg viewBox="0 0 400 240" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%', display: 'block' }}>
+      <defs>
+        <linearGradient id="creek-bg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#0d0a06" />
+          <stop offset="100%" stopColor="#100c07" />
+        </linearGradient>
+        <linearGradient id="water-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(50,130,180,0.75)" />
+          <stop offset="100%" stopColor="rgba(30,90,140,0.65)" />
+        </linearGradient>
+        <radialGradient id="creek-sky" cx="50%" cy="0%" r="65%">
+          <stop offset="0%" stopColor="rgba(80,55,20,0.25)" />
+          <stop offset="100%" stopColor="rgba(10,8,4,0)" />
+        </radialGradient>
+      </defs>
+      <rect width="400" height="240" fill="url(#creek-bg)" />
+      <rect width="400" height="240" fill="url(#creek-sky)" />
+      <ellipse cx="200" cy="30" rx="160" ry="50" fill="rgba(200,130,40,0.1)" />
+      <rect x="30" y="80" width="10" height="130" rx="3" fill="rgba(35,22,10,0.9)" />
+      <ellipse cx="35" cy="68" rx="30" ry="38" fill="rgba(28,45,18,0.82)" />
+      <ellipse cx="35" cy="58" rx="22" ry="28" fill="rgba(35,58,22,0.75)" />
+      <rect x="75" y="95" width="8" height="115" rx="3" fill="rgba(35,22,10,0.85)" />
+      <ellipse cx="79" cy="83" rx="24" ry="32" fill="rgba(28,45,18,0.78)" />
+      <ellipse cx="79" cy="74" rx="18" ry="22" fill="rgba(38,62,24,0.7)" />
+      <rect x="355" y="85" width="10" height="125" rx="3" fill="rgba(35,22,10,0.9)" />
+      <ellipse cx="360" cy="72" rx="28" ry="36" fill="rgba(28,45,18,0.82)" />
+      <ellipse cx="360" cy="62" rx="20" ry="26" fill="rgba(35,58,22,0.75)" />
+      <rect x="315" y="100" width="8" height="110" rx="3" fill="rgba(35,22,10,0.85)" />
+      <ellipse cx="319" cy="88" rx="22" ry="30" fill="rgba(28,45,18,0.78)" />
+      <ellipse cx="319" cy="80" rx="16" ry="20" fill="rgba(38,62,24,0.7)" />
+      <path d="M0,175 Q30,162 60,158 Q90,155 115,160 Q130,163 140,170" stroke="rgba(50,38,22,0.7)" strokeWidth="2" fill="rgba(28,20,10,0.6)" />
+      <path d="M0,240 L0,175 Q30,162 60,158 Q90,155 115,160 Q130,163 140,170 L140,240 Z" fill="rgba(22,16,8,0.85)" />
+      <path d="M400,170 Q375,158 348,155 Q320,153 295,158 Q278,162 265,170" stroke="rgba(50,38,22,0.7)" strokeWidth="2" fill="rgba(28,20,10,0.6)" />
+      <path d="M400,240 L400,170 Q375,158 348,155 Q320,153 295,158 Q278,162 265,170 L265,240 Z" fill="rgba(22,16,8,0.85)" />
+      <path d="M140,240 L140,170 Q155,160 200,158 Q245,157 265,170 L265,240 Z" fill="url(#water-grad)" />
+      <path d="M155,185 Q200,180 248,185" stroke="rgba(120,200,240,0.3)" strokeWidth="1.5" fill="none" />
+      <path d="M150,200 Q200,194 252,200" stroke="rgba(120,200,240,0.25)" strokeWidth="1.5" fill="none" />
+      <path d="M148,215 Q200,208 255,215" stroke="rgba(120,200,240,0.2)" strokeWidth="1.5" fill="none" />
+      <ellipse cx="200" cy="172" rx="55" ry="8" fill="rgba(160,220,255,0.12)" />
+      <rect x="138" y="165" width="130" height="8" rx="2" fill="rgba(80,50,20,0.9)" />
+      <rect x="142" y="158" width="122" height="7" rx="2" fill="rgba(75,46,18,0.85)" transform="rotate(-2, 203, 161)" />
+      <rect x="145" y="150" width="115" height="6" rx="2" fill="rgba(70,44,17,0.8)" transform="rotate(1.5, 202, 153)" />
+      <line x1="155" y1="173" x2="148" y2="145" stroke="rgba(65,40,15,0.75)" strokeWidth="3" strokeLinecap="round" />
+      <line x1="175" y1="173" x2="170" y2="143" stroke="rgba(65,40,15,0.72)" strokeWidth="2.5" strokeLinecap="round" />
+      <line x1="200" y1="173" x2="198" y2="140" stroke="rgba(65,40,15,0.75)" strokeWidth="3" strokeLinecap="round" />
+      <line x1="225" y1="173" x2="228" y2="142" stroke="rgba(65,40,15,0.72)" strokeWidth="2.5" strokeLinecap="round" />
+      <line x1="248" y1="173" x2="252" y2="144" stroke="rgba(65,40,15,0.7)" strokeWidth="3" strokeLinecap="round" />
+      <ellipse cx="115" cy="172" rx="18" ry="10" fill="rgba(55,35,15,0.95)" />
+      <circle cx="130" cy="169" r="8" fill="rgba(55,35,15,0.95)" />
+      <ellipse cx="133" cy="162" rx="3" ry="4" fill="rgba(45,28,12,0.9)" />
+      <circle cx="137" cy="170" r="2" fill="rgba(30,18,8,0.9)" />
+      <circle cx="134" cy="167" r="1.5" fill="rgba(200,180,140,0.8)" />
+      <ellipse cx="97" cy="176" rx="14" ry="5" fill="rgba(45,28,12,0.9)" transform="rotate(-15, 97, 176)" />
+      <line x1="88" y1="174" x2="108" y2="177" stroke="rgba(35,22,10,0.6)" strokeWidth="1" />
+      <line x1="87" y1="177" x2="107" y2="180" stroke="rgba(35,22,10,0.6)" strokeWidth="1" />
+      <ellipse cx="160" cy="230" rx="8" ry="4" fill="rgba(40,32,20,0.6)" />
+      <ellipse cx="185" cy="225" rx="6" ry="3" fill="rgba(40,32,20,0.55)" />
+      <ellipse cx="215" cy="228" rx="7" ry="3.5" fill="rgba(40,32,20,0.6)" />
+      <ellipse cx="240" cy="222" rx="5" ry="2.5" fill="rgba(40,32,20,0.55)" />
+      <ellipse cx="200" cy="190" rx="30" ry="6" fill="rgba(200,150,60,0.07)" />
+    </svg>
   )
 }
 
@@ -470,134 +719,131 @@ function TheDemos() {
   const demos = [
     {
       to: '/demo/reef',
-      label: 'Reef',
+      label: 'Reef — Team',
       title: 'The Coral Reef',
-      description: 'A shallow tropical reef ecosystem. Coral health mirrors team wellbeing, fish population reflects engagement, and water clarity shows trust. Watch how the environment shifts as team signals change.',
-      accent: 'rgba(30, 100, 200, 0.5)',
-      accentLight: 'rgba(60, 140, 255, 0.8)',
-      bg: 'radial-gradient(ellipse at 30% 60%, rgba(10,40,100,0.6), rgba(5,10,25,0))',
-      previewBg: '#0a1628',
+      description: 'A shallow tropical reef ecosystem. Coral health mirrors team wellbeing, fish population reflects engagement, and water clarity shows trust. Watch it respond as signals shift.',
+      accent: 'rgba(30, 100, 200, 0.45)',
+      accentLight: 'rgba(70, 148, 255, 0.85)',
+      thumbnail: <ReefThumbnail />,
     },
     {
       to: '/demo/tree',
-      label: 'Forest',
+      label: 'Forest — Team',
       title: 'The Living Tree',
-      description: 'A single old-growth tree in a forest clearing. Its foliage density and color reflect organizational vitality. Bare branches signal distress. Full green canopy signals flourishing. Seasonal effects mark significant moments.',
-      accent: 'rgba(20, 110, 60, 0.5)',
-      accentLight: 'rgba(60, 200, 100, 0.8)',
-      bg: 'radial-gradient(ellipse at 60% 40%, rgba(5,40,20,0.6), rgba(5,10,18,0))',
-      previewBg: '#060d0a',
+      description: 'A single old-growth tree in a forest clearing. Its foliage density and color reflect organizational vitality. Bare branches signal distress. A full canopy signals flourishing.',
+      accent: 'rgba(20, 110, 55, 0.45)',
+      accentLight: 'rgba(65, 205, 105, 0.85)',
+      thumbnail: <TreeThumbnail />,
+    },
+    {
+      to: '/demo/creek',
+      label: 'Creek — Personal',
+      title: 'The Beaver Creek',
+      description: 'A mountain creek shaped by beaver activity. Water flow reflects your sense of energy. The beaver colony mirrors connection. Stream clarity maps to your confidence in what lies ahead.',
+      accent: 'rgba(140, 90, 25, 0.45)',
+      accentLight: 'rgba(215, 155, 65, 0.85)',
+      thumbnail: <CreekThumbnail />,
     },
   ]
 
   return (
-    <section style={{ ...sectionStyle, paddingTop: 80 }}>
-      <div style={labelStyle}>Live Demos</div>
-      <h2 style={headingStyle}>Two worlds. One signal.</h2>
-      <p style={{ ...bodyStyle, marginBottom: 48, maxWidth: 540 }}>
-        Habitat ships with two visual themes. Both encode the same team data — the aesthetics are a matter of taste and context.
-      </p>
+    <Zone>
+      <section style={{ padding: '110px 0' }}>
+        <Label>Live Demos</Label>
+        <h2 style={H2}>Three worlds. One signal.</h2>
+        <p style={{ ...body, marginBottom: 64, maxWidth: 580 }}>
+          Each theme encodes the same underlying data differently.
+          Two for organizations, one for individuals. The aesthetics are a matter of context.
+        </p>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: 20,
-        }}
-      >
-        {demos.map(demo => (
-          <Link
-            key={demo.to}
-            to={demo.to}
-            style={{
-              display: 'block',
-              textDecoration: 'none',
-              background: `${demo.bg}, rgba(255,255,255,0.025)`,
-              border: `1px solid ${demo.accent}`,
-              borderRadius: 16,
-              overflow: 'hidden',
-              transition: 'border-color 0.25s, transform 0.25s',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.borderColor = demo.accentLight
-              ;(e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.borderColor = demo.accent
-              ;(e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
-            }}
-          >
-            {/* Preview area */}
-            <div
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: 16,
+          }}
+        >
+          {demos.map(demo => (
+            <Link
+              key={demo.to}
+              to={demo.to}
               style={{
-                height: 160,
-                background: demo.previewBg,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
+                display: 'block',
+                textDecoration: 'none',
+                border: `1px solid ${demo.accent}`,
+                borderRadius: 12,
                 overflow: 'hidden',
+                transition: 'border-color 0.22s, transform 0.22s',
+                background: 'rgba(255,255,255,0.018)',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.borderColor = demo.accentLight
+                ;(e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)'
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.borderColor = demo.accent
+                ;(e.currentTarget as HTMLElement).style.transform = 'translateY(0)'
               }}
             >
-              <div
-                style={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: '50%',
-                  background: demo.accent,
-                  filter: 'blur(32px)',
-                  position: 'absolute',
-                }}
-              />
-              <div
-                style={{
-                  fontFamily: FONT,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  letterSpacing: '0.14em',
-                  textTransform: 'uppercase',
-                  color: demo.accentLight,
-                  position: 'relative',
-                  zIndex: 1,
-                }}
-              >
-                {demo.label} Theme
+              <div style={{ height: 240, position: 'relative', overflow: 'hidden' }}>
+                {demo.thumbnail}
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 12,
+                    left: 14,
+                    fontFamily: FONT,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: '0.15em',
+                    textTransform: 'uppercase',
+                    color: demo.accentLight,
+                    background: 'rgba(4,5,10,0.6)',
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                    padding: '4px 10px',
+                    borderRadius: 5,
+                    border: `1px solid ${demo.accent}`,
+                  }}
+                >
+                  {demo.label}
+                </div>
               </div>
-            </div>
 
-            {/* Text */}
-            <div style={{ padding: '24px 24px 28px' }}>
-              <div
-                style={{
-                  fontFamily: FONT,
-                  fontSize: 17,
-                  fontWeight: 600,
-                  color: 'rgba(215, 225, 245, 0.9)',
-                  marginBottom: 10,
-                }}
-              >
-                {demo.title}
+              <div style={{ padding: '24px 24px 28px' }}>
+                <div
+                  style={{
+                    fontFamily: FONT,
+                    fontSize: 18,
+                    fontWeight: 600,
+                    color: '#d8e0f2',
+                    letterSpacing: '-0.01em',
+                    marginBottom: 10,
+                  }}
+                >
+                  {demo.title}
+                </div>
+                <div style={{ ...body, fontSize: 14, lineHeight: 1.65 }}>
+                  {demo.description}
+                </div>
+                <div
+                  style={{
+                    marginTop: 20,
+                    fontFamily: FONT,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: demo.accentLight,
+                    opacity: 0.88,
+                  }}
+                >
+                  Launch demo →
+                </div>
               </div>
-              <div style={{ ...bodyStyle, fontSize: 14, lineHeight: 1.65 }}>
-                {demo.description}
-              </div>
-              <div
-                style={{
-                  marginTop: 20,
-                  fontFamily: FONT,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: demo.accentLight,
-                  opacity: 0.85,
-                }}
-              >
-                Launch demo →
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </section>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </Zone>
   )
 }
 
@@ -607,76 +853,80 @@ function HowItWorks() {
   const steps = [
     {
       n: '01',
-      title: 'Deploy',
-      body: 'Run the setup wizard to create your organization\'s deployment. Takes under 5 minutes. You get a unique tank URL and a manager dashboard.',
+      title: 'Configure',
+      body: 'Set up Habitat for your context — a team deployment or a personal practice. Choose a visual theme, define your questions, set your cadence.',
     },
     {
       n: '02',
-      title: 'Invite',
-      body: 'Share an anonymous submission link with your team. No accounts, no login. Participants answer 3–5 short questions every week.',
+      title: 'Respond',
+      body: 'Answer three short questions. Takes under a minute. For teams: shared anonymously across participants. For individuals: just you.',
     },
     {
       n: '03',
       title: 'Display',
-      body: 'Put the tank view on a screen in your office or share the link in Slack. The visualization updates as responses come in.',
+      body: 'Put the visualization on a screen, pin it in a tab, or keep it open in the background. The signal is ambient — it doesn\'t demand attention.',
     },
     {
       n: '04',
-      title: 'Respond',
-      body: 'Use the manager dashboard to see underlying scores and trends. Side-quest events mark moments worth celebrating or addressing.',
+      title: 'Attune',
+      body: 'Over time, patterns emerge. The ecosystem becomes a read on what\'s actually happening — beneath the noise, before the crisis.',
     },
   ]
 
   return (
-    <section style={{ ...sectionStyle, paddingTop: 80 }}>
-      <div style={labelStyle}>How It Works</div>
-      <h2 style={headingStyle}>Up and running in an afternoon.</h2>
+    <Zone overlay="rgba(0,0,0,0.18)" topBorder bottomBorder>
+      <section style={{ padding: '110px 0' }}>
+        <Label>How It Works</Label>
+        <h2 style={H2}>Running in an afternoon.</h2>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-          gap: 2,
-          marginTop: 12,
-        }}
-      >
-        {steps.map((step, i) => (
-          <div
-            key={step.n}
-            style={{
-              padding: '32px 24px 36px',
-              background: i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
-              borderRadius: 12,
-            }}
-          >
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: 0,
+            marginTop: 60,
+            borderTop: '1px solid rgba(255,255,255,0.07)',
+          }}
+        >
+          {steps.map((step, i) => (
             <div
+              key={step.n}
               style={{
-                fontFamily: FONT,
-                fontSize: 28,
-                fontWeight: 700,
-                color: 'rgba(60,110,220,0.25)',
-                letterSpacing: '-0.02em',
-                marginBottom: 16,
+                padding: '40px 32px 44px',
+                borderRight: i < steps.length - 1 ? '1px solid rgba(255,255,255,0.07)' : 'none',
               }}
             >
-              {step.n}
+              <div
+                style={{
+                  fontFamily: FONT,
+                  fontSize: 42,
+                  fontWeight: 700,
+                  color: BLUE_DIM,
+                  letterSpacing: '-0.04em',
+                  lineHeight: 1,
+                  marginBottom: 24,
+                }}
+              >
+                {step.n}
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT,
+                  fontSize: 16,
+                  fontWeight: 600,
+                  color: '#cdd7ef',
+                  letterSpacing: '-0.01em',
+                  marginBottom: 12,
+                }}
+              >
+                {step.title}
+              </div>
+              <div style={{ ...body, fontSize: 14, lineHeight: 1.68 }}>{step.body}</div>
             </div>
-            <div
-              style={{
-                fontFamily: FONT,
-                fontSize: 15,
-                fontWeight: 600,
-                color: 'rgba(210, 222, 240, 0.88)',
-                marginBottom: 10,
-              }}
-            >
-              {step.title}
-            </div>
-            <div style={{ ...bodyStyle, fontSize: 14 }}>{step.body}</div>
-          </div>
-        ))}
-      </div>
-    </section>
+          ))}
+        </div>
+      </section>
+    </Zone>
   )
 }
 
@@ -684,63 +934,65 @@ function HowItWorks() {
 
 function Footer() {
   return (
-    <footer
-      style={{
-        position: 'relative',
-        zIndex: 1,
-        borderTop: '1px solid rgba(255,255,255,0.05)',
-        padding: '40px 32px',
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 20,
-        maxWidth: 860,
-        margin: '0 auto',
-      }}
-    >
-      <div
+    <Zone topBorder>
+      <footer
         style={{
-          fontFamily: FONT,
-          fontSize: 13,
-          color: 'rgba(130, 148, 180, 0.55)',
-          letterSpacing: '0.04em',
+          padding: '44px 0',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 20,
         }}
       >
-        Habitat — living organizational intelligence
-      </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          {/* Minimal branching mark */}
+          <svg width="20" height="18" viewBox="0 0 20 18" fill="none">
+            <path d="M10 18 L10 11" stroke="rgba(65,130,255,0.4)" strokeWidth="1.2" strokeLinecap="round" />
+            <path d="M10 11 L4 6"  stroke="rgba(65,130,255,0.35)" strokeWidth="1.2" strokeLinecap="round" />
+            <path d="M10 11 L16 6" stroke="rgba(65,130,255,0.35)" strokeWidth="1.2" strokeLinecap="round" />
+            <circle cx="4"  cy="5"  r="1.8" fill="rgba(65,130,255,0.35)" />
+            <circle cx="16" cy="5"  r="1.8" fill="rgba(65,130,255,0.35)" />
+            <circle cx="10" cy="2"  r="1.8" fill="rgba(65,130,255,0.3)" />
+            <path d="M10 8 L10 3" stroke="rgba(65,130,255,0.25)" strokeWidth="1" strokeLinecap="round" />
+          </svg>
+          <div
+            style={{
+              fontFamily: FONT,
+              fontSize: 13,
+              color: 'rgba(120,140,180,0.5)',
+              letterSpacing: '0.04em',
+            }}
+          >
+            Habitat
+          </div>
+        </div>
 
-      <div style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
-        <Link
-          to="/setup"
-          style={{
-            fontFamily: FONT,
-            fontSize: 13,
-            color: 'rgba(140, 165, 215, 0.6)',
-            textDecoration: 'none',
-            transition: 'color 0.2s',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.color = 'rgba(170, 195, 245, 0.85)')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(140, 165, 215, 0.6)')}
-        >
-          Setup your deployment
-        </Link>
-        <Link
-          to="/login"
-          style={{
-            fontFamily: FONT,
-            fontSize: 13,
-            color: 'rgba(140, 165, 215, 0.6)',
-            textDecoration: 'none',
-            transition: 'color 0.2s',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.color = 'rgba(170, 195, 245, 0.85)')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(140, 165, 215, 0.6)')}
-        >
-          Sign in
-        </Link>
-      </div>
-    </footer>
+        <div style={{ display: 'flex', gap: 28, alignItems: 'center', flexWrap: 'wrap' }}>
+          {[
+            { to: '/setup', label: 'Set up a deployment' },
+            { to: '/login',  label: 'Sign in' },
+          ].map(link => (
+            <Link
+              key={link.to}
+              to={link.to}
+              style={{
+                fontFamily: FONT,
+                fontSize: 13,
+                color: 'rgba(130,155,210,0.55)',
+                textDecoration: 'none',
+                transition: 'color 0.2s',
+                letterSpacing: '0.01em',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'rgba(170,195,245,0.85)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(130,155,210,0.55)')}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      </footer>
+    </Zone>
   )
 }
 
@@ -748,24 +1000,13 @@ function Footer() {
 
 export default function LandingPage() {
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: '#060912',
-        overflowX: 'hidden',
-      }}
-    >
+    <div style={{ minHeight: '100vh', background: '#05060c', overflowX: 'hidden' }}>
       <AnimatedBackground />
       <Hero />
-      <hr style={divider} />
+      <WhatIsIt />
       <TheProblem />
-      <hr style={divider} />
-      <TheApproach />
-      <hr style={divider} />
       <TheEvidence />
-      <hr style={divider} />
       <TheDemos />
-      <hr style={divider} />
       <HowItWorks />
       <Footer />
     </div>
