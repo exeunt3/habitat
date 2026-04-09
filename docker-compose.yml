@@ -1,0 +1,45 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: habitat
+      POSTGRES_PASSWORD: habitat
+      POSTGRES_DB: habitat
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U habitat"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: "postgresql://habitat:habitat@postgres:5432/habitat"
+      JWT_SECRET: "${JWT_SECRET:-change-me-in-production}"
+      ADMIN_KEY: "${ADMIN_KEY:-change-me}"
+      # SMTP — set these in a .env file next to docker-compose.yml
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_SECURE: "${SMTP_SECURE:-false}"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASS: "${SMTP_PASS:-}"
+      SMTP_FROM: "${SMTP_FROM:-Habitat <no-reply@habitat.local>}"
+      APP_URL: "${APP_URL:-http://localhost:3001}"
+      NODE_ENV: "production"
+      PORT: "3001"
+
+volumes:
+  postgres_data:

@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SubmissionFrequency {
+  DAILY
+  WEEKLY
+}
+
+enum Role {
+  MEMBER
+  MANAGER
+}
+
+model Deployment {
+  id                  String              @id @default(cuid())
+  name                String
+  theme               String              @default("reef")
+  questions           Json
+  submissionFrequency SubmissionFrequency @default(WEEKLY)
+  decayRate           Float               @default(0.95)
+  driftSpeed          Float               @default(1.0)
+  createdAt           DateTime            @default(now())
+  tokens              Token[]
+  responses           Response[]
+  sideQuests          SideQuest[]
+  users               User[]
+}
+
+model Token {
+  id           String     @id @default(cuid())
+  deploymentId String
+  deployment   Deployment @relation(fields: [deploymentId], references: [id])
+  token        String     @unique
+  issued       Boolean    @default(true)
+  used         Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+}
+
+model Response {
+  id           String     @id @default(cuid())
+  deploymentId String
+  deployment   Deployment @relation(fields: [deploymentId], references: [id])
+  token        String
+  answers      Json
+  submittedAt  DateTime   @default(now())
+}
+
+model SideQuest {
+  id           String           @id @default(cuid())
+  deploymentId String
+  deployment   Deployment       @relation(fields: [deploymentId], references: [id])
+  title        String
+  description  String
+  deadline     DateTime
+  completed    Boolean          @default(false)
+  completedAt  DateTime?
+  createdAt    DateTime         @default(now())
+  events       SideQuestEvent[]
+}
+
+// Created when a manager marks a side quest complete.
+// eventType is drawn from the visual events list in the ecology reference.
+model SideQuestEvent {
+  id           String    @id @default(cuid())
+  sideQuestId  String
+  sideQuest    SideQuest @relation(fields: [sideQuestId], references: [id])
+  deploymentId String
+  eventType    String    // "manta_ray" | "bioluminescence" | "turtle_visit"
+  triggeredAt  DateTime  @default(now())
+}
+
+model User {
+  id           String      @id @default(cuid())
+  email        String
+  deploymentId String
+  deployment   Deployment  @relation(fields: [deploymentId], references: [id])
+  role         Role        @default(MEMBER)
+  createdAt    DateTime    @default(now())
+  authTokens   AuthToken[]
+
+  @@unique([email, deploymentId])
+}
+
+// Single-use magic-link tokens for authentication (separate from anonymous submission tokens)
+model AuthToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// Tracks WHO received a token this cycle — but NOT which token.
+// No join is possible between this table and Token/Response.
+model CycleParticipation {
+  id           String   @id @default(cuid())
+  userId       String
+  deploymentId String
+  cycleId      String
+  createdAt    DateTime @default(now())
+
+  @@unique([userId, deploymentId, cycleId])
+}
