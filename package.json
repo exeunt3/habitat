@@ -20,6 +20,7 @@
     "@react-three/postprocessing": "^2.19.1"
   },
   "overrides": {
-    "lodash": "4.17.21"
+    "lodash": "4.17.21",
+    "dotenv": "16.4.5"
   }
 }
