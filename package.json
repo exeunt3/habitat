@@ -14,13 +14,17 @@
     "db:studio": "npm run db:studio --workspace=server"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "@types/node": "20.17.0",
+    "typescript": "5.7.3",
+    "ts-jest": "29.2.5"
   },
   "dependencies": {
     "@react-three/postprocessing": "^2.19.1"
   },
   "overrides": {
     "lodash": "4.17.21",
-    "dotenv": "16.4.5"
+    "dotenv": "16.4.5",
+    "@types/node": "20.17.0"
   }
 }
